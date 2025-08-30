@@ -1,0 +1,16 @@
+streamlit
+langchain
+langchain-community
+langchain-google-genai
+langchain-openai
+google-generativeai
+openai
+python-docx
+python-dotenv
+pandas
+pillow
+pytesseract
+pymupdf
+faiss-cpu
+matplotlib
+seaborn
