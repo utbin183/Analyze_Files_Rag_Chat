@@ -14,3 +14,4 @@ pymupdf
 faiss-cpu
 matplotlib
 seaborn
+pypdf 

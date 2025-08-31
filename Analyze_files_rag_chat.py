@@ -18,6 +18,7 @@ import io
 import fitz
 import google.generativeai as genai
 from openai import OpenAI
+from openai import OpenAIError
 from docx import Document
 from dotenv import load_dotenv
 import base64
@@ -569,6 +570,11 @@ def get_vector_store(text_chunks,session_dir, provider="Gemini"):
         vector_store.save_local(session_dir)
         # Thông báo thành công
         st.success("Tài liệu đã được phân tích xong, sẵn sàng trả lời")
+    except OpenAIError as e:
+        if e.code == "insufficient_quota":
+            st.error("Đã vượt quá quota OpenAI. Vui lòng kiểm tra gói dịch vụ hoặc chuyển sang Gemini.")
+        else:
+            st.error(f"Lỗi lưu vector database: {e}")
     except Exception as e:
         # Báo lỗi nếu quá trình tạo/lưu vector store thất bại
         st.error(f"Lỗi lưu vector database: {e}")
