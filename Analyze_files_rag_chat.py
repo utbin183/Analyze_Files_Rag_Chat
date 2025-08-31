@@ -554,7 +554,7 @@ def get_text_chunks(text, chunk_size, chunk_overlap):
         return splitter.split_text(text)
     except Exception as e:
         # Báo lỗi nếu quá trình chia chunk thất bại
-        st.error(f"Lỗi chia chunk: {e}")
+        st.error(f"Lỗi chia chunk: {e}" if lang == "vi" else f"Error splitting chunks: {e}")
         return []
 
 def get_vector_store(text_chunks,session_dir, provider="Gemini"):
@@ -569,19 +569,19 @@ def get_vector_store(text_chunks,session_dir, provider="Gemini"):
          # Lưu vector database vào thư mục session_dir
         vector_store.save_local(session_dir)
         # Thông báo thành công
-        st.success("Tài liệu đã được phân tích xong, sẵn sàng trả lời")
+        st.success("Tài liệu đã được phân tích xong, sẵn sàng trả lời" if lang == "vi" else "Document analysis is done, ready to answer")
     except OpenAIError as e:
         if e.code == "insufficient_quota":
-            st.error("Đã vượt quá quota OpenAI. Vui lòng kiểm tra gói dịch vụ hoặc chuyển sang Gemini.")
+            st.error("Đã vượt quá quota OpenAI. Vui lòng kiểm tra gói dịch vụ hoặc chuyển sang Gemini." if lang == "vi" else "OpenAI quota exceeded. Please check your service plan or switch to Gemini.")
         else:
-            st.error(f"Lỗi lưu vector database: {e}")
+            st.error(f"Lỗi lưu vector database: {e}" if lang == "vi" else f"Error saving vector database: {e}")
     except Exception as e:
         # Báo lỗi nếu quá trình tạo/lưu vector store thất bại
-        st.error(f"Lỗi lưu vector database: {e}")
+        st.error(f"Lỗi lưu vector database: {e}" if lang == "vi" else f"Error saving vector database: {e}")
 
 def get_conversational_chain(answer_mode="Chi tiết", show_reasoning=False, provider="Gemini"):
     # Xác định phong cách trả lời
-    style = "ngắn gọn, súc tích" if answer_mode == "Ngắn gọn" else "chi tiết, đầy đủ"
+    style = "ngắn gọn, súc tích" if answer_mode == "Ngắn gọn" else "chi tiết, đầy đủ" 
 
     # Nếu người dùng muốn thấy reasoning steps thì thêm yêu cầu vào prompt
     reasoning_part = ""
@@ -626,9 +626,10 @@ def user_input(user_question, session_dir, answer_mode, show_reasoning, provider
             embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
         # Kiểm tra FAISS DB tồn tại chưa
         if not os.path.exists(session_dir):
-            st.error("Không tìm thấy FAISS index. Hãy phân tích tài liệu trước.")
-            return "Không tìm thấy dữ liệu để trả lời."
-        
+            st.error("Không tìm thấy FAISS index. Hãy phân tích tài liệu trước." if lang == "vi" else "FAISS index not found. Please analyze document first.")
+            error  = "Không tìm thấy dữ liệu để trả lời." if lang == "vi" else "No data found to answer."
+            return error
+
          # Load lại FAISS DB
         new_db = FAISS.load_local(session_dir, embeddings, allow_dangerous_deserialization=True)
         
@@ -638,8 +639,9 @@ def user_input(user_question, session_dir, answer_mode, show_reasoning, provider
         # Tạo chain QA
         chain = get_conversational_chain(answer_mode, show_reasoning, provider)
         if not chain:
-            return "Không tạo được chain."
-        
+            error = "Không tạo được chain." if lang == "vi" else "Failed to create chain."
+            return error
+
          # Gọi chain để sinh câu trả lời
         response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
         answer = response["output_text"]
@@ -651,9 +653,9 @@ def user_input(user_question, session_dir, answer_mode, show_reasoning, provider
         })
         return answer
     except Exception as e:
-        err = f"Lỗi xử lý câu hỏi: {e}"
-        st.error(err)
-        return err
+        error = f"Lỗi xử lý câu hỏi: {e}" if lang == "vi" else f"Error processing question: {e}"
+        st.error(error)
+        return error
 
 # ---------- Streamlit UI ----------
 # Cấu hình app Streamlit
