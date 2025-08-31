@@ -8,6 +8,7 @@ from langchain.prompts import PromptTemplate
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import UnstructuredWordDocumentLoader
+from langdetect import detect
 import json
 import os
 import tempfile
@@ -46,7 +47,12 @@ if not google_api_key and not openai_api_key:
 if google_api_key:
     genai.configure(api_key=google_api_key)
     
-
+def detect_language(text):
+    try:
+        return detect(text)
+    except:
+        return "vi"
+    
 # Đọc file JSON
 def load_language_strings(file_path="language_strings.json"):
     try:
@@ -143,7 +149,7 @@ def get_text_from_file(file_bytes, filename):
             if ocr_texts:
                 text += "\n\n[Text trích xuất từ ảnh]\n" + "\n".join(ocr_texts)
             # Tạo preview cho PDF (hiển thị text + ảnh trích xuất)
-            preview = {"type": "pdf", "text_preview": text[:1000], "images": images}
+            preview = {"type": "pdf", "text_preview": text[:0], "images": images}
             return text, preview
 
         # ==================== XỬ LÝ DOCX ====================
@@ -583,6 +589,9 @@ def get_conversational_chain(answer_mode="Chi tiết", show_reasoning=False, pro
     # Xác định phong cách trả lời
     style = "ngắn gọn, súc tích" if answer_mode == "Ngắn gọn" else "chi tiết, đầy đủ" 
 
+    # Lấy ngôn ngữ từ session_state hoặc mặc định là tiếng Việt
+    detected_lang = st.session_state.get("language", "vi")
+
     # Nếu người dùng muốn thấy reasoning steps thì thêm yêu cầu vào prompt
     reasoning_part = ""
     if show_reasoning:
@@ -592,10 +601,10 @@ def get_conversational_chain(answer_mode="Chi tiết", show_reasoning=False, pro
     prompt_template = f"""
 Bạn là một trợ lý AI, nhiệm vụ là trả lời dựa *chính xác* vào ngữ cảnh cung cấp. 
 Tuyệt đối **không bịa** nếu ngữ cảnh không có thông tin. 
-Nếu không tìm thấy câu trả lời, hãy trả lời đúng nguyên văn: "Câu trả lời không có trong ngữ cảnh."
+Nếu không tìm thấy câu trả lời, hãy trả lời đúng nguyên văn: 
+"{'Câu trả lời không có trong ngữ cảnh.' if detected_lang == 'vi' else 'The answer is not in the context.'}"
 
-Yêu cầu: Trả lời theo phong cách {style}.
-{reasoning_part}
+Yêu cầu: Trả lời theo phong cách {style} bằng ngôn ngữ {'tiếng Việt' if detected_lang == 'vi' else 'tiếng Anh'}.
 
 Ngữ cảnh: {{context}}
 Câu hỏi: {{question}}
@@ -614,11 +623,13 @@ Answer:
         chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
         return chain
     except Exception as e:
-        st.error(f"Lỗi tạo chain: {e}")
+        st.error(f"Lỗi tạo chain: {e}" if lang == "vi" else f"Error creating chain: {e}")
         return None
 
 def user_input(user_question, session_dir, answer_mode, show_reasoning, provider="Gemini"):
     try:
+        detected_lang = detect_language(user_question)
+        lang = detected_lang if detected_lang in ["vi", "en"] else "vi"
          # Chọn embeddings phù hợp
         if provider == "Gemini":
             embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
