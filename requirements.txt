@@ -15,3 +15,4 @@ faiss-cpu
 matplotlib
 seaborn
 pypdf 
+langdetect
